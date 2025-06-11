@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { DashboardMap } from "@/components/dashboard-map"
 
 export default function Dashboard() {
   return (
@@ -23,9 +24,7 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            <div className="bg-gray-300 rounded-lg flex items-center justify-center h-[300px] md:h-[400px] text-center p-4 text-gray-600">
-              서울 지도 자리입니다 (소비 + OD + 관광)
-            </div>
+            <DashboardMap />
           </div>
 
           <div className="space-y-4">
