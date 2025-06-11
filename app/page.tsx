@@ -5,11 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { DashboardMap } from "@/components/dashboard-map"
 import { IndustrySelectorHardcoded, type SelectedIndustry } from "@/components/industry-selector-hardcoded"
+import keywordsData from "@/data/자치구별_키워드_top3.json"
 
 interface DistrictInfo {
   name: string;
   code?: string;
   properties?: any;
+  자치구?: string;
+  키워드1?: string;
+  키워드2?: string;
+  키워드3?: string;
 }
 
 export default function Dashboard() {
@@ -17,7 +22,11 @@ export default function Dashboard() {
   const [selectedIndustry, setSelectedIndustry] = useState<SelectedIndustry>({});
 
   const handleDistrictClick = (district: DistrictInfo) => {
-    setSelectedDistrict(district);
+    // Find the keyword info for the clicked district
+    const keywordInfo = keywordsData.find(
+      (item) => item.자치구 === district.name
+    );
+    setSelectedDistrict({ ...district, ...keywordInfo });
   };
 
   const handleIndustryChange = (industry: SelectedIndustry) => {
@@ -41,7 +50,7 @@ export default function Dashboard() {
                 인기 지역
               </Button>
               <Button variant="outline" size="sm" className="text-xs rounded-full bg-gray-100 hover:bg-gray-200">
-                타겟 인터뷰
+                타겟 유저
               </Button>
               <Button variant="outline" size="sm" className="text-xs rounded-full bg-gray-100 hover:bg-gray-200">
                 모집
@@ -74,12 +83,18 @@ export default function Dashboard() {
 
             <Card className="p-6 bg-green-50">
               <h3 className="text-center text-gray-700 mb-4">
-                {selectedDistrict 
-                  ? `${selectedDistrict.name} 간편 카드뷰 워드클라우드`
-                  : '간편 카드뷰 워드클라우드'
+                {selectedDistrict
+                  ? `${selectedDistrict.name} Top 3 키워드`
+                  : 'Top 3 키워드'
                 }
               </h3>
-              <div className="h-32"></div>
+              {selectedDistrict && (
+                <div className="flex gap-2 justify-center">
+                  <span>{selectedDistrict.키워드1}</span>
+                  <span>{selectedDistrict.키워드2}</span>
+                  <span>{selectedDistrict.키워드3}</span>
+                </div>
+              )}
             </Card>
           </div>
         </div>
