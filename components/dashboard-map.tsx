@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from "react";
 import dynamic from 'next/dynamic';
+import { 
+  loadAllDistrictData, 
+  calculateDistrictStats, 
+  categorizeDistricts, 
+  getDistrictColor,
+  formatKoreanNumber,
+  type DistrictCardRecord,
+  type IndustryRecommendationData,
+  type RecommendationCriteria,
+  CRITERIA_LABELS,
+  CRITERIA_UNITS
+} from "@/lib/district-card-data";
 
 // Dynamic import to prevent SSR issues
 const MapContainer = dynamic(
@@ -26,13 +38,20 @@ interface DistrictInfo {
 }
 
 interface DashboardMapProps {
-  onDistrictClick?: (district: DistrictInfo) => void;
+  onDistrictClick?: (district: DistrictInfo | null) => void;
+  selectedIndustry?: { 대분류?: string; 중분류?: string; 소분류?: string };
+  showIndustryColors?: boolean; // 업종별 색칠 모드 토글
+  recommendationCriteria?: RecommendationCriteria; // 추천 기준
 }
 
-export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
+export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryColors, recommendationCriteria = 'avgSalesPerStore' }: DashboardMapProps) {
   const [isClient, setIsClient] = useState(false);
   const [seoulBoundaries, setSeoulBoundaries] = useState<any>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
+  const [hoveredDistrict, setHoveredDistrict] = useState<string | null>(null);
+  const [districtData, setDistrictData] = useState<DistrictCardRecord[]>([]);
+  const [districtCategories, setDistrictCategories] = useState<{ [category: number]: string[] }>({});
+  const [districtStats, setDistrictStats] = useState<IndustryRecommendationData>({});
 
   // 서울 영역 경계 설정
   const seoulBounds = [
@@ -70,7 +89,20 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
       }
     };
 
+    // 신한카드 구별 데이터 로드
+    const loadDistrictCardData = async () => {
+      try {
+        console.log('구별 신한카드 데이터 로드 시작...');
+        const data = await loadAllDistrictData();
+        console.log('구별 신한카드 데이터 로드 완료:', data.length, '개 레코드');
+        setDistrictData(data);
+      } catch (error) {
+        console.error('구별 신한카드 데이터 로드 실패:', error);
+      }
+    };
+
     loadSeoulBoundaries();
+    loadDistrictCardData();
     
     // Fix default icon issue in Next.js/Leaflet
     (async () => {
@@ -89,18 +121,46 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
     })();
   }, []);
 
+  // 업종 선택이나 추천 기준이 변경될 때마다 구별 통계 재계산
+  useEffect(() => {
+    if (districtData.length > 0 && selectedIndustry) {
+      console.log('업종 선택 변경:', selectedIndustry);
+      console.log('추천 기준:', recommendationCriteria);
+      const stats = calculateDistrictStats(districtData, selectedIndustry);
+      const categories = categorizeDistricts(stats, recommendationCriteria);
+      
+      console.log('구별 통계:', stats);
+      console.log('구별 카테고리:', categories);
+      
+      setDistrictStats(stats);
+      setDistrictCategories(categories);
+    }
+  }, [districtData, selectedIndustry, recommendationCriteria]);
+
   // 구별 스타일 함수
   const districtStyle = (feature?: any) => {
     const districtName = getDistrictName(feature);
     const isSelected = selectedDistrict === districtName;
+    const isHovered = hoveredDistrict === districtName;
+    
+    // 색상 결정 로직
+    let fillColor = '#e5e7eb'; // 기본 회색
+    
+    // hover 시에는 선택 여부에 관계없이 빨간색으로 칠하기
+    if (isHovered) {
+      fillColor = '#dc2626'; // hover 색상은 모든 구에 적용
+    } else if (showIndustryColors && selectedIndustry && Object.keys(selectedIndustry).length > 0) {
+      // 선택된 구도 원래 업종별 색상 유지
+      fillColor = getDistrictColor(districtName, districtCategories, isHovered);
+    }
     
     return {
-      fillColor: isSelected ? '#3B82F6' : 'transparent',
-      weight: 2,
+      fillColor: fillColor,
+      weight: isSelected ? 3 : 2,
       opacity: 1,
-      color: '#6B7280',
+      color: isSelected ? '#dc2626' : '#000000', // 선택된 구는 빨간색 테두리, 나머지는 검은색
       dashArray: '',
-      fillOpacity: isSelected ? 0.3 : 0
+      fillOpacity: fillColor === '#e5e7eb' ? 0 : (isSelected ? 0.8 : 0.6) // 선택된 구는 더 진하게, 나머지는 0.6
     };
   };
 
@@ -119,8 +179,12 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
   // 구별 클릭/호버 이벤트
   const onEachDistrict = (feature: any, layer: any) => {
     const districtName = getDistrictName(feature);
+    const stats = districtStats[districtName];
     
-    layer.bindTooltip(districtName, {
+    // 툴팁 내용 구성 - hover 시에는 구 이름만 표시
+    let tooltipContent = districtName;
+    
+    layer.bindTooltip(tooltipContent, {
       permanent: false,
       direction: 'center',
       className: 'district-tooltip'
@@ -128,21 +192,10 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
     
     layer.on({
       mouseover: function (e: any) {
-        const layer = e.target;
-        if (selectedDistrict !== districtName) {
-          layer.setStyle({
-            fillColor: '#3B82F6',
-            fillOpacity: 0.2,
-            weight: 3,
-            color: '#1D4ED8'
-          });
-        }
+        setHoveredDistrict(districtName);
       },
       mouseout: function (e: any) {
-        const layer = e.target;
-        if (selectedDistrict !== districtName) {
-          layer.setStyle(districtStyle(feature));
-        }
+        setHoveredDistrict(null);
       },
       click: function (e: any) {
         const districtInfo: DistrictInfo = {
@@ -150,14 +203,26 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
           properties: feature.properties
         };
         
-        setSelectedDistrict(districtName);
-        
-        // 부모 컴포넌트에 클릭된 구 정보 전달
-        if (onDistrictClick) {
-          onDistrictClick(districtInfo);
+        // 이미 선택된 구를 다시 클릭하면 선택 해제
+        if (selectedDistrict === districtName) {
+          setSelectedDistrict(null);
+          console.log('구 선택 해제:', districtName);
+          
+          // 부모 컴포넌트에 선택 해제 알림
+          if (onDistrictClick) {
+            onDistrictClick(null);
+          }
+        } else {
+          setSelectedDistrict(districtName);
+          
+          // 부모 컴포넌트에 클릭된 구 정보 전달
+          if (onDistrictClick) {
+            onDistrictClick(districtInfo);
+          }
+          
+          console.log('선택된 구:', districtInfo);
+          console.log('선택된 구 통계:', stats);
         }
-        
-        console.log('선택된 구:', districtInfo);
       }
     });
   };
@@ -180,11 +245,13 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
           background: white !important;
           border: 1px solid #ccc !important;
           border-radius: 4px !important;
-          padding: 4px 8px !important;
+          padding: 6px 10px !important;
           font-size: 12px !important;
           font-weight: 500 !important;
           color: #333 !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+          max-width: 200px !important;
+          line-height: 1.4 !important;
         }
         .leaflet-container {
           background: #f9fafb !important;
@@ -237,7 +304,7 @@ export function DashboardMap({ onDistrictClick }: DashboardMapProps) {
             data={seoulBoundaries}
             style={districtStyle}
             onEachFeature={onEachDistrict}
-            key={selectedDistrict} // 선택된 구가 변경될 때 리렌더링
+            key={`${selectedDistrict}-${hoveredDistrict}-${JSON.stringify(selectedIndustry)}-${showIndustryColors}-${recommendationCriteria}`} // 상태 변경 시 리렌더링
           />
         )}
       </MapContainer>
