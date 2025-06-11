@@ -36,14 +36,32 @@ export function DashboardMap() {
   useEffect(() => {
     setIsClient(true);
     
-    // 서울시 구별 경계 데이터 로드
+    // 서울시 구별 경계 데이터 로드 (최신 데이터 우선 시도)
     const loadSeoulBoundaries = async () => {
-      try {
-        const response = await fetch('https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json');
-        const data = await response.json();
-        setSeoulBoundaries(data);
-      } catch (error) {
-        console.error('서울시 경계 데이터 로드 실패:', error);
+      // 시도할 데이터 소스들 (최신순)
+      const dataSources = [
+        // 2021년 업데이트된 상세한 서울 구별 데이터
+        'https://raw.githubusercontent.com/raqoon886/Local_HangJeongDong/master/hangjeongdong_서울특별시.geojson',
+        // 백업: southkorea 2015년 데이터
+        'https://raw.githubusercontent.com/southkorea/seoul-maps/master/juso/2015/json/seoul_municipalities_geo_simple.json',
+        // 백업: southkorea 2013년 데이터
+        'https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json'
+      ];
+
+      for (const source of dataSources) {
+        try {
+          console.log(`서울시 경계 데이터 로드 시도: ${source}`);
+          const response = await fetch(source);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('서울시 경계 데이터 로드 성공:', data);
+            setSeoulBoundaries(data);
+            break;
+          }
+        } catch (error) {
+          console.warn(`데이터 소스 실패: ${source}`, error);
+          continue;
+        }
       }
     };
 
@@ -69,20 +87,28 @@ export function DashboardMap() {
   // 구별 스타일 함수
   const districtStyle = (feature?: any) => {
     return {
-      fillColor: 'rgba(65, 105, 225, 0.2)',
+      fillColor: 'rgba(65, 105, 225, 0.15)',
       weight: 2,
-      opacity: 1,
+      opacity: 0.8,
       color: '#4169E1',
       dashArray: '',
-      fillOpacity: 0.2
+      fillOpacity: 0.15
     };
   };
 
   // 구별 클릭/호버 이벤트
   const onEachDistrict = (feature: any, layer: any) => {
+    // 다양한 속성명 시도
+    const districtName = feature.properties.name || 
+                        feature.properties.NAME || 
+                        feature.properties.adm_nm ||
+                        feature.properties.SIG_KOR_NM ||
+                        feature.properties.sigungu ||
+                        '알 수 없음';
+    
     layer.bindPopup(
       `<div style="text-align: center;">
-        <h3 style="margin: 0; color: #333;">${feature.properties.name || feature.properties.NAME || '알 수 없음'}</h3>
+        <h3 style="margin: 0; color: #333;">${districtName}</h3>
         <p style="margin: 5px 0; font-size: 12px; color: #666;">서울특별시</p>
       </div>`
     );
@@ -93,7 +119,7 @@ export function DashboardMap() {
         layer.setStyle({
           weight: 3,
           color: '#FF6B6B',
-          fillOpacity: 0.4
+          fillOpacity: 0.3
         });
       },
       mouseout: function (e: any) {
