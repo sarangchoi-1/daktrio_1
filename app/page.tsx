@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardMap } from "@/components/dashboard-map"
 import { IndustrySelectorHardcoded, type SelectedIndustry } from "@/components/industry-selector-hardcoded"
 import { MobileFlowChart } from "@/components/mobile-flow-chart"
@@ -14,6 +15,7 @@ import { type RecommendationCriteria, CRITERIA_LABELS } from "@/lib/district-car
 import DistrictConsumptionData from "@/components/district-consumption-data"
 import LLMAnalysis from "@/components/llm-analysis"
 import TargetDemographicAnalysisComponent from "@/components/target-demographic-analysis"
+import DistrictComparison from "@/components/district-comparison"
 import keywordsData from "@/data/자치구별_키워드_top3.json"
 
 interface DistrictInfo {
@@ -197,152 +199,168 @@ export default function Dashboard() {
         {/* 업종 선택 */}
         <IndustrySelectorHardcoded onIndustryChange={handleIndustryChange} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* 왼쪽: 유동인구 분석 차트 + 키워드 */}
-          <div className="lg:col-span-1 space-y-4">
-            <MobileFlowChartNew selectedDistrict={selectedDistrict?.name} />
-            
-            {/* 키워드 카드 */}
-            <Card className="p-6 bg-green-50">
-              <h3 className="text-center text-gray-700 mb-4">
-                {selectedDistrict
-                  ? `${selectedDistrict.name} Top 3 키워드`
-                  : 'Top 3 키워드'
-                }
-              </h3>
-              {selectedDistrict && (
-                <div className="flex gap-2 justify-center flex-wrap">
-                  <span 
-                    className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
-                    onClick={() => {
-                      const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드1}`;
-                      const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
-                      window.open(naverBlogUrl, '_blank');
-                    }}
-                  >
-                    #{selectedDistrict.키워드1}
-                  </span>
-                  <span 
-                    className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
-                    onClick={() => {
-                      const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드2}`;
-                      const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
-                      window.open(naverBlogUrl, '_blank');
-                    }}
-                  >
-                    #{selectedDistrict.키워드2}
-                  </span>
-                  <span 
-                    className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
-                    onClick={() => {
-                      const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드3}`;
-                      const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
-                      window.open(naverBlogUrl, '_blank');
-                    }}
-                  >
-                    #{selectedDistrict.키워드3}
-                  </span>
-                </div>
-              )}
-            </Card>
-          </div>
+        {/* 탭 시스템 */}
+        <Tabs defaultValue="analysis" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="analysis">지역 분석</TabsTrigger>
+            <TabsTrigger value="comparison">구별 비교</TabsTrigger>
+          </TabsList>
 
-          {/* 가운데: 지도 (폭 축소) */}
-          <div className="lg:col-span-2">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex gap-2">
-                <Button 
-                  variant={recommendationCriteria === 'avgSalesPerStore' ? 'default' : 'outline'} 
-                  size="sm" 
-                  className="text-xs rounded-full"
-                  onClick={() => setRecommendationCriteria('avgSalesPerStore')}
-                >
-                  {CRITERIA_LABELS.avgSalesPerStore}
-              </Button>
-                <Button 
-                  variant={recommendationCriteria === 'totalSales' ? 'default' : 'outline'} 
-                  size="sm" 
-                  className="text-xs rounded-full"
-                  onClick={() => setRecommendationCriteria('totalSales')}
-                >
-                  {CRITERIA_LABELS.totalSales}
-              </Button>
-                <Button 
-                  variant={recommendationCriteria === 'totalTransactions' ? 'default' : 'outline'} 
-                  size="sm" 
-                  className="text-xs rounded-full"
-                  onClick={() => setRecommendationCriteria('totalTransactions')}
-                >
-                  {CRITERIA_LABELS.totalTransactions}
-              </Button>
+          {/* 첫 번째 탭: 기존 지역 분석 */}
+          <TabsContent value="analysis" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* 왼쪽: 유동인구 분석 차트 + 키워드 */}
+              <div className="lg:col-span-1 space-y-4">
+                <MobileFlowChartNew selectedDistrict={selectedDistrict?.name} />
+                
+                {/* 키워드 카드 */}
+                <Card className="p-6 bg-green-50">
+                  <h3 className="text-center text-gray-700 mb-4">
+                    {selectedDistrict
+                      ? `${selectedDistrict.name} Top 3 키워드`
+                      : 'Top 3 키워드'
+                    }
+                  </h3>
+                  {selectedDistrict && (
+                    <div className="flex gap-2 justify-center flex-wrap">
+                      <span 
+                        className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
+                        onClick={() => {
+                          const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드1}`;
+                          const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
+                          window.open(naverBlogUrl, '_blank');
+                        }}
+                      >
+                        #{selectedDistrict.키워드1}
+                      </span>
+                      <span 
+                        className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
+                        onClick={() => {
+                          const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드2}`;
+                          const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
+                          window.open(naverBlogUrl, '_blank');
+                        }}
+                      >
+                        #{selectedDistrict.키워드2}
+                      </span>
+                      <span 
+                        className="italic underline text-blue-600 cursor-pointer hover:text-blue-800 transition-colors"
+                        onClick={() => {
+                          const searchQuery = `${selectedDistrict.name} ${selectedDistrict.키워드3}`;
+                          const naverBlogUrl = `https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(searchQuery)}`;
+                          window.open(naverBlogUrl, '_blank');
+                        }}
+                      >
+                        #{selectedDistrict.키워드3}
+                      </span>
+                    </div>
+                  )}
+                </Card>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-600">업종별 추천 지역</span>
-                <Switch 
-                  checked={showIndustryColors} 
-                  onCheckedChange={setShowIndustryColors}
-                  disabled={Object.keys(mappedIndustry).length === 0}
+
+              {/* 가운데: 지도 (폭 축소) */}
+              <div className="lg:col-span-2">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={recommendationCriteria === 'avgSalesPerStore' ? 'default' : 'outline'} 
+                      size="sm" 
+                      className="text-xs rounded-full"
+                      onClick={() => setRecommendationCriteria('avgSalesPerStore')}
+                    >
+                      {CRITERIA_LABELS.avgSalesPerStore}
+                  </Button>
+                    <Button 
+                      variant={recommendationCriteria === 'totalSales' ? 'default' : 'outline'} 
+                      size="sm" 
+                      className="text-xs rounded-full"
+                      onClick={() => setRecommendationCriteria('totalSales')}
+                    >
+                      {CRITERIA_LABELS.totalSales}
+                  </Button>
+                    <Button 
+                      variant={recommendationCriteria === 'totalTransactions' ? 'default' : 'outline'} 
+                      size="sm" 
+                      className="text-xs rounded-full"
+                      onClick={() => setRecommendationCriteria('totalTransactions')}
+                    >
+                      {CRITERIA_LABELS.totalTransactions}
+                  </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">업종별 추천 지역</span>
+                    <Switch 
+                      checked={showIndustryColors} 
+                      onCheckedChange={setShowIndustryColors}
+                      disabled={Object.keys(mappedIndustry).length === 0}
+                    />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <DashboardMap 
+                    onDistrictClick={handleDistrictClick} 
+                    selectedIndustry={mappedIndustry}
+                    showIndustryColors={showIndustryColors}
+                    recommendationCriteria={recommendationCriteria}
+                    selectedDistrictName={selectedDistrict?.name}
+                  />
+                  
+                  {/* 범례 - 지도 위에 오버레이 */}
+                  {showIndustryColors && Object.keys(mappedIndustry).length > 0 && (
+                    <div className="absolute bottom-4 left-4 right-4 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg border shadow-lg z-10">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-sm font-medium text-gray-700">
+                          추천 지역 범례
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#1e3a8a' }}></div>
+                          <span>상위 3개 구</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#3b82f6' }}></div>
+                          <span>4-6위</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#bfdbfe' }}></div>
+                          <span>7-10위</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: 'transparent' }}></div>
+                          <span>기타 지역</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 오른쪽: 차트 영역 (폭 확대) */}
+              <div className="lg:col-span-2 space-y-4">
+                <DistrictConsumptionData 
+                  districtName={selectedDistrict?.name}
+                  selectedIndustry={mappedIndustry}
+                  recommendationCriteria={recommendationCriteria}
+                  onDistrictSelect={handleBubbleDistrictSelect}
+                />
+
+                <TargetDemographicAnalysisComponent 
+                  districtName={selectedDistrict?.name} 
+                  selectedIndustry={mappedIndustry}
                 />
               </div>
             </div>
+          </TabsContent>
 
-            <div className="relative">
-              <DashboardMap 
-                onDistrictClick={handleDistrictClick} 
-                selectedIndustry={mappedIndustry}
-                showIndustryColors={showIndustryColors}
-                recommendationCriteria={recommendationCriteria}
-                selectedDistrictName={selectedDistrict?.name}
-              />
-              
-              {/* 범례 - 지도 위에 오버레이 */}
-              {showIndustryColors && Object.keys(mappedIndustry).length > 0 && (
-                <div className="absolute bottom-4 left-4 right-4 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg border shadow-lg z-10">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-sm font-medium text-gray-700">
-                      추천 지역 범례
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#1e3a8a' }}></div>
-                      <span>상위 3개 구</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#3b82f6' }}></div>
-                      <span>4-6위</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#bfdbfe' }}></div>
-                      <span>7-10위</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: 'transparent' }}></div>
-                      <span>기타 지역</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* 두 번째 탭: 구별 비교 */}
+          <TabsContent value="comparison" className="space-y-6">
+            <DistrictComparison selectedIndustry={mappedIndustry} />
+          </TabsContent>
+        </Tabs>
 
-          {/* 오른쪽: 차트 영역 (폭 확대) */}
-          <div className="lg:col-span-2 space-y-4">
-            <DistrictConsumptionData 
-              districtName={selectedDistrict?.name}
-              selectedIndustry={mappedIndustry}
-              recommendationCriteria={recommendationCriteria}
-              onDistrictSelect={handleBubbleDistrictSelect}
-            />
-
-            <TargetDemographicAnalysisComponent 
-              districtName={selectedDistrict?.name} 
-              selectedIndustry={mappedIndustry}
-            />
-          </div>
-        </div>
-
-        {/* AI 분석 컴포넌트 - 전체 너비 */}
+        {/* AI 분석 컴포넌트 - 전체 너비, 공통 */}
         <div className="w-full">
           <LLMAnalysis 
             selectedIndustry={mappedIndustry}
