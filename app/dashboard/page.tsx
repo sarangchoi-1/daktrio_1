@@ -93,7 +93,7 @@ export default function DashboardPage() {
                         <p><span className="font-medium">속성 정보:</span> {Object.keys(selectedDistrict.properties).length}개 항목</p>
                       )}
                     </div>
-                  </div>
+            </div>
 
                   {/* 선택된 업종 정보 표시 */}
                   {selectedIndustry.class1 && (
@@ -141,14 +141,14 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+          </div>
 
         {/* 유동인구 분석 */}
         <MobileFlowChart selectedDistrict={selectedDistrict?.name} />
 
         {/* 하단 통계 카드들 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">총 분석 구역</CardTitle>
               <BarChart className="h-4 w-4 text-muted-foreground" />
@@ -159,9 +159,9 @@ export default function DashboardPage() {
                 서울특별시 전체 구역
               </p>
             </CardContent>
-          </Card>
-          
-          <Card>
+            </Card>
+
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">데이터 유형</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -172,9 +172,9 @@ export default function DashboardPage() {
                 소비 · OD · 관광 데이터
               </p>
             </CardContent>
-          </Card>
-          
-          <Card>
+            </Card>
+
+            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">선택된 구역</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
@@ -202,9 +202,9 @@ export default function DashboardPage() {
                 {selectedIndustry.code || '창업 희망 업종'}
               </p>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
-      </div>
     </div>
   )
 }

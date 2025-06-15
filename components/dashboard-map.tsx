@@ -222,19 +222,19 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
           
           console.log('선택된 구:', districtInfo);
           console.log('선택된 구 통계:', stats);
-        }
+    }
       }
     });
   };
 
   if (!isClient) {
-    return (
-      <div 
+  return (
+    <div
         style={{ height: 600, width: "100%", borderRadius: "0.5rem" }}
         className="bg-gray-50 flex items-center justify-center border"
-      >
+    >
         <p className="text-gray-600">지도를 로딩중입니다...</p>
-      </div>
+    </div>
     );
   }
 

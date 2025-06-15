@@ -182,7 +182,7 @@ export default function Dashboard() {
                   onClick={() => setRecommendationCriteria('avgSalesPerStore')}
                 >
                   {CRITERIA_LABELS.avgSalesPerStore}
-                </Button>
+              </Button>
                 <Button 
                   variant={recommendationCriteria === 'totalSales' ? 'default' : 'outline'} 
                   size="sm" 
@@ -190,7 +190,7 @@ export default function Dashboard() {
                   onClick={() => setRecommendationCriteria('totalSales')}
                 >
                   {CRITERIA_LABELS.totalSales}
-                </Button>
+              </Button>
                 <Button 
                   variant={recommendationCriteria === 'totalTransactions' ? 'default' : 'outline'} 
                   size="sm" 
@@ -198,7 +198,7 @@ export default function Dashboard() {
                   onClick={() => setRecommendationCriteria('totalTransactions')}
                 >
                   {CRITERIA_LABELS.totalTransactions}
-                </Button>
+              </Button>
               </div>
               
               <div className="flex items-center gap-2">
