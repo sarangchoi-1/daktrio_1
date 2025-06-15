@@ -262,7 +262,10 @@ export default function DistrictConsumptionData({
         <CardContent>
           <div 
             className="relative w-full h-96 border rounded bg-gray-50"
-            style={{ overflow: 'visible' }}
+            style={{ 
+              overflow: 'visible',
+              zIndex: 1 // 컨테이너의 z-index 설정
+            }}
             onClick={(e) => {
               // 배경 클릭 시 선택 해제 (버블이 아닌 빈 공간 클릭)
               if (e.target === e.currentTarget) {
@@ -390,12 +393,14 @@ export default function DistrictConsumptionData({
                       {/* 선택된 구의 상세 정보 - 버블 근처에 작은 카드로 */}
                       {isSelected && (
                         <div 
-                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-3 pointer-events-none"
+                          className="absolute bg-white border-2 border-blue-200 rounded-lg p-3 pointer-events-none"
                           style={{
                             left: showInfoOnLeft ? `${-216}px` : `${entry.z * 2 + 16}px`,
                             top: `-40px`,
                             minWidth: '200px',
-                            zIndex: 999999 // 최상위 레이어
+                            zIndex: 9999999, // 최상위 레이어
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(59, 130, 246, 0.1)',
+                            backgroundColor: 'rgba(255, 255, 255, 0.98)'
                           }}
                         >
                           <div className="text-sm font-semibold text-gray-800 mb-2">

@@ -340,7 +340,7 @@ export default function Dashboard() {
               {/* 오른쪽: 차트 영역 (폭 확대) */}
               <div className="lg:col-span-2 space-y-4">
                 <DistrictConsumptionData 
-                  districtName={selectedDistrict?.name ?? ""}
+                  districtName={selectedDistrict?.name}
                   selectedIndustry={mappedIndustry}
                   recommendationCriteria={recommendationCriteria}
                   onDistrictSelect={handleBubbleDistrictSelect}
