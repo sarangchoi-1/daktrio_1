@@ -25,3 +25,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large data files
+data/LOCAL_PEOPLE_20250606.csv
+public/data/LOCAL_PEOPLE_20250606_utf8.csv

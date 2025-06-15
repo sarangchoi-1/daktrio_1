@@ -18,11 +18,11 @@ export interface DistrictCardRecord {
 
 export interface DistrictIndustryStats {
   district: string;
-  totalSales: number;      // 총 매출
-  totalTransactions: number; // 총 거래 건수
+  totalSales: number;      // 월 총 매출
+  totalTransactions: number; // 월 총 거래 건수
   totalStores: number;     // 총 가맹점 수
-  avgSalesPerStore: number; // 점포당 평균 매출 (핵심 지표)
-  avgSalesPerTransaction: number; // 건당 평균 매출
+  avgSalesPerStore: number; // 월 점포당 평균 매출 (핵심 지표)
+  avgSalesPerTransaction: number; // 월 건당 평균 매출
 }
 
 export interface IndustryRecommendationData {
@@ -145,7 +145,7 @@ export const SAMPLE_COFFEE_DISTRICT_STATS: IndustryRecommendationData = {
   }
 };
 
-// 추천 구 카테고리 (점포당 평균 매출 기준)
+// 추천 구 카테고리 (월 점포당 평균 매출 기준)
 export const SAMPLE_COFFEE_RECOMMENDATIONS = {
   1: ["서초구", "송파구", "강남구"],        // 1등급 (가장 높은 수익성)
   2: ["마포구", "종로구", "용산구"],        // 2등급 (중간 수익성)
@@ -180,11 +180,11 @@ export const LLM_SYSTEM_PROMPT = `
 5. 친근하고 이해하기 쉬운 언어 사용
 
 ## 데이터 해석 기준
-- totalSales: 총 매출액 (원)
-- totalTransactions: 총 거래 건수 (건)
+- totalSales: 월 총 매출액 (원)
+- totalTransactions: 월 총 거래 건수 (건)
 - totalStores: 총 가맹점 수 (개)
-- avgSalesPerStore: 점포당 평균 매출 (원) - 수익성 핵심 지표
-- avgSalesPerTransaction: 건당 평균 매출 (원) - 객단가 지표
+- avgSalesPerStore: 월 점포당 평균 매출 (원) - 수익성 핵심 지표
+- avgSalesPerTransaction: 월 건당 평균 매출 (원) - 객단가 지표
 `;
 
 export const LLM_USER_PROMPT_TEMPLATE = `
@@ -194,11 +194,11 @@ export const LLM_USER_PROMPT_TEMPLATE = `
 분석 기준: {criteriaName}
 
 ## 해당 구 데이터
-- 총 매출: {totalSales:,}원
-- 총 거래건수: {totalTransactions:,}건  
+- 월 총 매출: {totalSales:,}원
+- 월 총 거래건수: {totalTransactions:,}건  
 - 가맹점 수: {totalStores:,}개
-- 점포당 평균 매출: {avgSalesPerStore:,}원
-- 건당 평균 매출: {avgSalesPerTransaction:,}원
+- 월 점포당 평균 매출: {avgSalesPerStore:,}원
+- 월 건당 평균 매출: {avgSalesPerTransaction:,}원
 
 ## 상위 추천 구역
 {topDistricts}
@@ -212,9 +212,9 @@ export const LLM_USER_PROMPT_TEMPLATE = `
 // ===== 샘플 LLM 응답 =====
 export const SAMPLE_LLM_RESPONSE: LLMResponse = {
   insights: [
-    "강남구는 커피전문점 업종에서 서울 최고 수준의 시장 규모를 보유하고 있습니다. 총 매출 154억원으로 압도적 1위를 기록했습니다.",
-    "점포당 평균 매출 1,233만원으로 서초구(1,306만원) 다음으로 높은 수익성을 보여, 높은 임대료에도 불구하고 충분한 수익성을 확보할 수 있는 지역입니다.",
-    "건당 평균 매출 5,410원으로 서울 평균보다 높아, 고객들의 구매력과 프리미엄 커피에 대한 수요가 높은 것으로 분석됩니다."
+    "강남구는 커피전문점 업종에서 서울 최고 수준의 시장 규모를 보유하고 있습니다. 월 총 매출 154억원으로 압도적 1위를 기록했습니다.",
+    "월 점포당 평균 매출 1,233만원으로 서초구(1,306만원) 다음으로 높은 수익성을 보여, 높은 임대료에도 불구하고 충분한 수익성을 확보할 수 있는 지역입니다.",
+    "월 건당 평균 매출 5,410원으로 서울 평균보다 높아, 고객들의 구매력과 프리미엄 커피에 대한 수요가 높은 것으로 분석됩니다."
   ],
   recommendations: [
     "강남구는 이미 포화된 시장이므로, 차별화된 컨셉이나 프리미엄 브랜드로 접근하는 것이 유리합니다.",
@@ -222,9 +222,9 @@ export const SAMPLE_LLM_RESPONSE: LLMResponse = {
     "1,250개의 기존 매장이 있어 입지 선정이 매우 중요하며, 오피스 밀집 지역이나 대형 상권 근처가 유리할 것입니다."
   ],
   comparisons: [
-    "서초구 대비: 총 매출은 20% 높지만 점포당 매출은 6% 낮아, 시장 규모는 크지만 경쟁도 더 치열합니다.",
-    "송파구 대비: 총 매출 38% 높고, 점포당 매출도 2% 높아 전반적으로 우위에 있습니다.",
-    "마포구 대비: 총 매출 57% 높고, 점포당 매출 3% 높아 확실한 프리미엄 시장임을 보여줍니다."
+    "서초구 대비: 월 총 매출은 20% 높지만 월 점포당 매출은 6% 낮아, 시장 규모는 크지만 경쟁도 더 치열합니다.",
+    "송파구 대비: 월 총 매출 38% 높고, 월 점포당 매출도 2% 높아 전반적으로 우위에 있습니다.",
+    "마포구 대비: 월 총 매출 57% 높고, 월 점포당 매출 3% 높아 확실한 프리미엄 시장임을 보여줍니다."
   ],
   businessTips: [
     "높은 임대료를 감안하여 최소 월 1,500만원 이상의 매출 목표를 설정하세요.",
@@ -243,9 +243,9 @@ export function formatPromptTemplate(
                       context.selectedIndustry.class1 || '선택된 업종';
   
   const criteriaNames = {
-    avgSalesPerStore: '점포당 평균 매출',
-    totalSales: '총 매출',
-    totalTransactions: '총 거래 건수'
+    avgSalesPerStore: '월 점포당 평균 매출',
+    totalSales: '월 총 매출',
+    totalTransactions: '월 총 거래 건수'
   };
 
   return template

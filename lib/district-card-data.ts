@@ -15,11 +15,11 @@ export interface DistrictCardRecord {
 
 export interface DistrictIndustryStats {
   district: string;
-  totalSales: number;      // 총 매출
-  totalTransactions: number; // 총 거래 건수
+  totalSales: number;      // 월 총 매출 (전체 시장 추정)
+  totalTransactions: number; // 월 총 거래 건수 (전체 시장 추정)
   totalStores: number;     // 총 가맹점 수
-  avgSalesPerStore: number; // 점포당 평균 매출 (핵심 지표)
-  avgSalesPerTransaction: number; // 건당 평균 매출
+  avgSalesPerStore: number; // 월 점포당 중앙값 매출 (전체 시장 추정, 핵심 지표)
+  avgSalesPerTransaction: number; // 월 건당 중앙값 매출 (전체 시장 추정)
 }
 
 export interface IndustryRecommendationData {
@@ -172,6 +172,23 @@ export async function loadDistrictData(district: string): Promise<DistrictCardRe
   }
 }
 
+// 신한카드 시장점유율 (한국신용평가원 기준)
+const SHINHAN_CARD_MARKET_SHARE = 0.175; // 17.5%
+
+// 중앙값 계산 함수
+function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  } else {
+    return sorted[mid];
+  }
+}
+
 // 특정 업종에 대한 구별 통계 계산
 export function calculateDistrictStats(
   records: DistrictCardRecord[],
@@ -196,6 +213,7 @@ export function calculateDistrictStats(
   
   // 구별로 그룹핑하여 통계 계산
   const districtStats: IndustryRecommendationData = {};
+  const districtRecords: { [district: string]: DistrictCardRecord[] } = {};
   
   filteredRecords.forEach(record => {
     const district = record.district;
@@ -209,18 +227,36 @@ export function calculateDistrictStats(
         avgSalesPerStore: 0,
         avgSalesPerTransaction: 0
       };
+      districtRecords[district] = [];
     }
     
     const stats = districtStats[district];
-    stats.totalSales += record.카드매출금액;
-    stats.totalTransactions += record.카드매출건수;
-    stats.totalStores += record.매출가맹점수;
+    // 신한카드 데이터를 전체 시장으로 추정 (17.5% → 100%)
+    stats.totalSales += record.카드매출금액 / SHINHAN_CARD_MARKET_SHARE;
+    stats.totalTransactions += record.카드매출건수 / SHINHAN_CARD_MARKET_SHARE;
+    stats.totalStores += record.매출가맹점수; // 가맹점 수는 그대로 (전체 가맹점 수)
+    
+    // 구별 레코드 저장 (중앙값 계산용)
+    districtRecords[district].push(record);
   });
   
-  // 평균값 계산
-  Object.values(districtStats).forEach(stats => {
-    stats.avgSalesPerStore = stats.totalStores > 0 ? stats.totalSales / stats.totalStores : 0;
-    stats.avgSalesPerTransaction = stats.totalTransactions > 0 ? stats.totalSales / stats.totalTransactions : 0;
+  // 중앙값으로 점포당/건당 매출 계산
+  Object.keys(districtStats).forEach(district => {
+    const records = districtRecords[district];
+    const stats = districtStats[district];
+    
+    if (records && records.length > 0) {
+      // 점당매출금액들을 전체 시장으로 추정하여 중앙값 계산
+      const salesPerStoreValues = records.map(record => 
+        (record.점당매출금액 || 0) / SHINHAN_CARD_MARKET_SHARE
+      );
+      const salesPerTransactionValues = records.map(record => 
+        (record.건당매출금액 || 0) / SHINHAN_CARD_MARKET_SHARE
+      );
+      
+      stats.avgSalesPerStore = calculateMedian(salesPerStoreValues);
+      stats.avgSalesPerTransaction = calculateMedian(salesPerTransactionValues);
+    }
   });
   
   return districtStats;
@@ -307,9 +343,9 @@ export function formatKoreanNumber(num: number): string {
 
 // 기준별 한국어 라벨
 export const CRITERIA_LABELS = {
-  avgSalesPerStore: '점포당 평균 매출',
-  totalSales: '총 매출',
-  totalTransactions: '총 거래 건수'
+  avgSalesPerStore: '점포당 매출 중앙값',
+  totalSales: '총매출',
+  totalTransactions: '총 거래건수'
 };
 
 // 기준별 단위

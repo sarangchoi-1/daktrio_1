@@ -17,9 +17,9 @@ interface DistrictStats {
 }
 
 const CRITERIA_LABELS = {
-  avgSalesPerStore: '점포당 평균 매출',
-  totalSales: '총 매출',
-  totalTransactions: '총 거래 건수'
+  avgSalesPerStore: '월 점포당 중앙값 매출 (추정)',
+  totalSales: '월 총 매출 (추정)',
+  totalTransactions: '월 총 거래 건수 (추정)'
 };
 
 const CRITERIA_UNITS = {
@@ -63,11 +63,33 @@ export default function DistrictConsumptionData({
             filteredData = filteredData.filter((item: DistrictCardRecord) => item.업종소분류 === selectedIndustry.소분류);
           }
 
-          // 통계 계산
-          const totalSales = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.카드매출금액 || 0), 0);
-          const totalStores = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.매출가맹점수 || 0), 0);
-          const totalTransactions = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.카드매출건수 || 0), 0);
-          const avgSalesPerStore = totalStores > 0 ? totalSales / totalStores : 0;
+          // 신한카드 시장점유율 (한국신용평가원 기준)
+          const SHINHAN_CARD_MARKET_SHARE = 0.175; // 17.5%
+          
+          // 중앙값 계산 함수
+          const calculateMedian = (values: number[]): number => {
+            if (values.length === 0) return 0;
+            
+            const sorted = [...values].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            
+            if (sorted.length % 2 === 0) {
+              return (sorted[mid - 1] + sorted[mid]) / 2;
+            } else {
+              return sorted[mid];
+            }
+          };
+          
+          // 통계 계산 - 신한카드 데이터를 전체 시장으로 추정
+          const totalSales = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.카드매출금액 || 0), 0) / SHINHAN_CARD_MARKET_SHARE;
+          const totalStores = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.매출가맹점수 || 0), 0); // 가맹점 수는 그대로
+          const totalTransactions = filteredData.reduce((sum: number, item: DistrictCardRecord) => sum + (item.카드매출건수 || 0), 0) / SHINHAN_CARD_MARKET_SHARE;
+          
+          // 중앙값으로 점포당 평균 매출 계산 (전체 시장 추정값)
+          const salesPerStoreValues = filteredData.map((item: DistrictCardRecord) => 
+            (item.점당매출금액 || 0) / SHINHAN_CARD_MARKET_SHARE
+          );
+          const avgSalesPerStore = calculateMedian(salesPerStoreValues);
 
           setStats({
             totalSales,
@@ -122,7 +144,7 @@ export default function DistrictConsumptionData({
       
       <div className="space-y-2 pt-2 border-t border-gray-200">
         <div className="flex justify-between">
-          <span className="text-gray-600">총 매출</span>
+          <span className="text-gray-600">월 총 매출 (추정)</span>
           <span className="font-medium">{formatKoreanNumber(stats.totalSales)}원</span>
         </div>
         <div className="flex justify-between">
@@ -130,7 +152,7 @@ export default function DistrictConsumptionData({
           <span className="font-medium">{stats.totalStores.toLocaleString()}개</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-600">총 거래건수</span>
+          <span className="text-gray-600">월 총 거래건수 (추정)</span>
           <span className="font-medium">{formatKoreanNumber(stats.totalTransactions)}건</span>
         </div>
       </div>
