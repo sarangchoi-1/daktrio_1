@@ -54,17 +54,59 @@ export function MobileFlowChartNew({ selectedDistrict }: MobileFlowChartNewProps
   const dayOfWeekAggregated = aggregateByDayOfWeek(flowData)
   const dayOfWeekChartData = transformToDayOfWeekChartData(dayOfWeekAggregated)
 
-  // 시간대별 상위 3개 식별 (복사본으로 정렬)
+  // 시간대별 상위 3개 식별 및 연속성 처리
+  const timeZoneTop3Hours = [...timeZoneChartData]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3)
+    .map(item => parseInt(item.timeZone.replace('시', '')))
+    .sort((a, b) => a - b) // 시간 순으로 정렬
+
+  // 연속된 시간대를 범위로 표시하는 함수
+  const formatTimeRanges = (hours: number[]): string => {
+    if (hours.length === 0) return '';
+    
+    const ranges: string[] = [];
+    let start = hours[0];
+    let end = hours[0];
+    
+    for (let i = 1; i < hours.length; i++) {
+      if (hours[i] === end + 1) {
+        end = hours[i];
+      } else {
+        if (start === end) {
+          ranges.push(`${start}시`);
+        } else {
+          ranges.push(`${start}시~${end}시`);
+        }
+        start = hours[i];
+        end = hours[i];
+      }
+    }
+    
+    // 마지막 범위 추가
+    if (start === end) {
+      ranges.push(`${start}시`);
+    } else {
+      ranges.push(`${start}시~${end}시`);
+    }
+    
+    return ranges.join(', ');
+  };
+
+  // 요일별 상위 3개 식별 (월~일 순서로 정렬)
+  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayOfWeekTop3Days = [...dayOfWeekChartData]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3)
+    .map(item => item.day)
+    .sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b)); // 월~일 순서로 정렬
+
   const timeZoneTop3 = [...timeZoneChartData]
     .sort((a, b) => b.total - a.total)
     .slice(0, 3)
     .map(item => item.timeZone)
 
-  // 요일별 상위 3개 식별 (복사본으로 정렬)
-  const dayOfWeekTop3 = [...dayOfWeekChartData]
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 3)
-    .map(item => item.day)
+  const dayOfWeekTop3 = dayOfWeekTop3Days;
 
   // 시간대별 차트 데이터에 색상 정보 추가 (원본 순서 유지)
   const timeZoneChartDataWithColors = timeZoneChartData.map(item => ({
@@ -193,6 +235,14 @@ export function MobileFlowChartNew({ selectedDistrict }: MobileFlowChartNewProps
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              {/* 시간별 인사이트 멘트 */}
+              {timeZoneTop3.length > 0 && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                  <div className="text-sm text-blue-800 font-medium">
+                    💡 {formatTimeRanges(timeZoneTop3Hours)}에 인구가 가장 많아요!
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -223,6 +273,14 @@ export function MobileFlowChartNew({ selectedDistrict }: MobileFlowChartNewProps
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              {/* 요일별 인사이트 멘트 */}
+              {dayOfWeekTop3.length > 0 && (
+                <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                  <div className="text-sm text-green-800 font-medium">
+                    💡 {dayOfWeekTop3Days.join(', ')}요일에 인구가 가장 많아요!
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 

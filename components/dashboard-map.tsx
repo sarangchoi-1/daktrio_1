@@ -16,6 +16,11 @@ import {
 } from "@/lib/district-card-data";
 
 // Dynamic import to prevent SSR issues
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+);
+
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
   { ssr: false }
@@ -53,6 +58,7 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
   const [districtData, setDistrictData] = useState<DistrictCardRecord[]>([]);
   const [districtCategories, setDistrictCategories] = useState<{ [category: number]: string[] }>({});
   const [districtStats, setDistrictStats] = useState<IndustryRecommendationData>({});
+  const [districtCenters, setDistrictCenters] = useState<{ [key: string]: [number, number] }>({});
 
   // 서울 영역 경계 설정
   const seoulBounds = [
@@ -86,6 +92,24 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
             const data = await response.json();
             console.log('서울시 구별 경계 데이터 로드 성공:', data);
             setSeoulBoundaries(data);
+            
+            // 각 구의 중심점 계산
+            const centers: { [key: string]: [number, number] } = {};
+            if (data.features) {
+              data.features.forEach((feature: any) => {
+                const districtName = feature.properties?.name || 
+                                   feature.properties?.NAME || 
+                                   feature.properties?.adm_nm ||
+                                   feature.properties?.SIG_KOR_NM ||
+                                   feature.properties?.sigungu;
+                if (districtName && feature.geometry) {
+                  centers[districtName] = calculateDistrictCenter(feature.geometry);
+                }
+              });
+            }
+            setDistrictCenters(centers);
+            console.log('구별 중심점 계산 완료:', centers);
+            
             break;
           }
         } catch (error) {
@@ -143,6 +167,44 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
     }
   }, [districtData, selectedIndustry, recommendationCriteria]);
 
+  // 구의 중심점을 계산하는 함수
+  const calculateDistrictCenter = (coordinates: any): [number, number] => {
+    let totalLat = 0;
+    let totalLng = 0;
+    let pointCount = 0;
+
+    const processCoordinates = (coords: any) => {
+      if (Array.isArray(coords[0])) {
+        coords.forEach((subCoord: any) => processCoordinates(subCoord));
+      } else {
+        totalLng += coords[0];
+        totalLat += coords[1];
+        pointCount++;
+      }
+    };
+
+    if (coordinates.type === 'Polygon') {
+      coordinates.coordinates.forEach((ring: any) => processCoordinates(ring));
+    } else if (coordinates.type === 'MultiPolygon') {
+      coordinates.coordinates.forEach((polygon: any) => {
+        polygon.forEach((ring: any) => processCoordinates(ring));
+      });
+    }
+
+    return pointCount > 0 ? [totalLat / pointCount, totalLng / pointCount] : [37.566, 126.978];
+  };
+
+  // 상위 3개 구 계산
+  const getTop3Districts = () => {
+    if (!showIndustryColors || !selectedIndustry || Object.keys(selectedIndustry).length === 0) {
+      return [];
+    }
+    
+    return districtCategories[1] || []; // 카테고리 1이 상위 3개
+  };
+
+  const top3Districts = getTop3Districts();
+
   // 구별 스타일 함수
   const districtStyle = (feature?: any) => {
     const districtName = getDistrictName(feature);
@@ -187,7 +249,7 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
     const districtName = getDistrictName(feature);
     const stats = districtStats[districtName];
     
-    // 툴팁 내용 구성 - hover 시에는 구 이름만 표시
+    // 툴크 내용 구성 - hover 시에는 구 이름만 표시
     let tooltipContent = districtName;
     
     layer.bindTooltip(tooltipContent, {
@@ -277,6 +339,16 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
         .leaflet-control-zoom a:hover {
           background-color: #f3f4f6 !important;
         }
+        .district-name-overlay {
+          z-index: 1000 !important;
+        }
+        .district-name-overlay div {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
       `}</style>
       
       <link
@@ -313,6 +385,36 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
             key={`${selectedDistrict}-${hoveredDistrict}-${JSON.stringify(selectedIndustry)}-${showIndustryColors}-${recommendationCriteria}`} // 상태 변경 시 리렌더링
           />
         )}
+        
+        {/* 상위 3개 구 이름 표시 */}
+        {isClient && top3Districts.length > 0 && top3Districts.map((districtName) => {
+          const center = districtCenters[districtName];
+          if (!center) return null;
+          
+          return (
+            <Marker
+              key={`district-label-${districtName}`}
+              position={center}
+              icon={typeof window !== 'undefined' ? (() => {
+                const L = require('leaflet');
+                return L.divIcon({
+                  html: `<div style="
+                    color: white; 
+                    font-weight: bold; 
+                    font-size: 14px; 
+                    text-align: center;
+                    white-space: nowrap;
+                    pointer-events: none;
+                    transform: translate(-50%, -50%);
+                                     ">${districtName.endsWith('구') ? districtName.slice(0, -1) : districtName}</div>`,
+                  className: 'district-name-overlay',
+                  iconSize: [0, 0],
+                  iconAnchor: [0, 0]
+                });
+              })() : undefined}
+            />
+          );
+        })}
       </MapContainer>
     </>
   );
