@@ -262,6 +262,7 @@ export default function DistrictConsumptionData({
         <CardContent>
           <div 
             className="relative w-full h-96 border rounded bg-gray-50"
+            style={{ overflow: 'visible' }}
             onClick={(e) => {
               // 배경 클릭 시 선택 해제 (버블이 아닌 빈 공간 클릭)
               if (e.target === e.currentTarget) {
@@ -384,49 +385,51 @@ export default function DistrictConsumptionData({
                       >
                         {entry.district.endsWith('구') ? entry.district.slice(0, -1) : entry.district}
                       </div>
-                    )}
-                    
-                    {/* 선택된 구의 상세 정보 - 버블 근처에 작은 카드로 */}
-                    {isSelected && (
-                      <div 
-                        className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-3 pointer-events-none"
-                        style={{
-                          left: showInfoOnLeft ? `${-216}px` : `${entry.z * 2 + 16}px`, // 왼쪽: -216px (200px 너비 + 16px 간격)
-                          top: `-40px`,
-                          minWidth: '200px',
-                          zIndex: 99999 // 최상위 레이어 - 더 높은 값으로 설정
-                        }}
-                      >
-                        <div className="text-sm font-semibold text-gray-800 mb-2">
-                          {entry.district} 소비 데이터
+                                          )}
+                      
+                      {/* 선택된 구의 상세 정보 - 버블 근처에 작은 카드로 */}
+                      {isSelected && (
+                        <div 
+                          className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-3 pointer-events-none"
+                          style={{
+                            left: showInfoOnLeft ? `${-216}px` : `${entry.z * 2 + 16}px`,
+                            top: `-40px`,
+                            minWidth: '200px',
+                            zIndex: 999999 // 최상위 레이어
+                          }}
+                        >
+                          <div className="text-sm font-semibold text-gray-800 mb-2">
+                            {entry.district} 소비 데이터
+                          </div>
+                          <div className="text-xs text-gray-600 mb-2">
+                            데이터 기준: {entry.yearMonth}
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">총 매출:</span>
+                              <span className="font-medium">{entry.x}억원</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">점포당 매출:</span>
+                              <span className="font-medium">{entry.y}만원</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">가맹점 수:</span>
+                              <span className="font-medium">{entry.totalStores.toLocaleString()}개</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">거래건수:</span>
+                              <span className="font-medium">{Math.round(entry.totalTransactions / 10000).toLocaleString()}만건</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-600 mb-2">
-                          데이터 기준: {entry.yearMonth}
-                        </div>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">총 매출:</span>
-                            <span className="font-medium">{entry.x}억원</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">점포당 매출:</span>
-                            <span className="font-medium">{entry.y}만원</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">가맹점 수:</span>
-                            <span className="font-medium">{entry.totalStores.toLocaleString()}개</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">거래건수:</span>
-                            <span className="font-medium">{Math.round(entry.totalTransactions / 10000).toLocaleString()}만건</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
                 );
               });
             })()}
+            
+
             
             {/* 선택된 구의 참조선 */}
             {selectedDistrict && (() => {
