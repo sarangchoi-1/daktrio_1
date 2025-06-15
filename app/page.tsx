@@ -162,6 +162,23 @@ export default function Dashboard() {
     }
   };
 
+  // 버블차트에서 구 선택 시 지도도 연동
+  const handleBubbleDistrictSelect = (districtName: string) => {
+    if (districtName === '') {
+      // 선택 해제
+      setSelectedDistrict(null);
+    } else {
+      // 새로운 구 선택
+      const keywordInfo = keywordsData.find(
+        (item) => item.자치구 === districtName
+      );
+      setSelectedDistrict({ 
+        name: districtName, 
+        ...keywordInfo 
+      });
+    }
+  };
+
   const handleIndustryChange = (industry: SelectedIndustry) => {
     console.log('업종 선택 변경:', industry);
     setSelectedIndustry(industry);
@@ -180,7 +197,7 @@ export default function Dashboard() {
         {/* 업종 선택 */}
         <IndustrySelectorHardcoded onIndustryChange={handleIndustryChange} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* 왼쪽: 유동인구 분석 차트 + 키워드 */}
           <div className="lg:col-span-1 space-y-4">
             <MobileFlowChartNew selectedDistrict={selectedDistrict?.name} />
@@ -230,7 +247,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* 가운데: 지도 */}
+          {/* 가운데: 지도 (폭 축소) */}
           <div className="lg:col-span-2">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex gap-2">
@@ -277,6 +294,7 @@ export default function Dashboard() {
                 selectedIndustry={mappedIndustry}
                 showIndustryColors={showIndustryColors}
                 recommendationCriteria={recommendationCriteria}
+                selectedDistrictName={selectedDistrict?.name}
               />
               
               {/* 범례 - 지도 위에 오버레이 */}
@@ -284,7 +302,7 @@ export default function Dashboard() {
                 <div className="absolute bottom-4 left-4 right-4 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg border shadow-lg z-10">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-sm font-medium text-gray-700">
-                      추천 지역 범례 ({CRITERIA_LABELS[recommendationCriteria]})
+                      추천 지역 범례
                     </span>
                     <div className="flex items-center gap-1">
                       <div className="w-3 h-3 rounded border border-black" style={{ backgroundColor: '#1e3a8a' }}></div>
@@ -308,30 +326,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 오른쪽: 기존 카드들 */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card className="p-6 bg-gray-100">
-              <h3 className="text-center text-gray-500 mb-4">
-                {selectedDistrict
-                  ? `${selectedDistrict.name} 월별 소비 데이터`
-                  : '월별 소비 데이터'
-                }
-              </h3>
-              {selectedDistrict && Object.keys(mappedIndustry).length > 0 ? (
-                <DistrictConsumptionData 
-                  districtName={selectedDistrict.name}
-                  selectedIndustry={mappedIndustry}
-                  recommendationCriteria={recommendationCriteria}
-                />
-              ) : (
-                <div className="h-32 flex items-center justify-center text-gray-400 text-sm">
-                  {Object.keys(mappedIndustry).length === 0 
-                    ? '업종을 선택해주세요'
-                    : '지도에서 구를 클릭해주세요'
-                  }
-                </div>
-              )}
-            </Card>
+          {/* 오른쪽: 차트 영역 (폭 확대) */}
+          <div className="lg:col-span-2 space-y-4">
+            <DistrictConsumptionData 
+              districtName={selectedDistrict?.name}
+              selectedIndustry={mappedIndustry}
+              recommendationCriteria={recommendationCriteria}
+              onDistrictSelect={handleBubbleDistrictSelect}
+            />
 
             <TargetDemographicAnalysisComponent 
               districtName={selectedDistrict?.name} 

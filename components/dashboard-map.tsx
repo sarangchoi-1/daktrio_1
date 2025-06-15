@@ -42,9 +42,10 @@ interface DashboardMapProps {
   selectedIndustry?: { 대분류?: string; 중분류?: string; 소분류?: string };
   showIndustryColors?: boolean; // 업종별 색칠 모드 토글
   recommendationCriteria?: RecommendationCriteria; // 추천 기준
+  selectedDistrictName?: string; // 외부에서 선택된 구 이름
 }
 
-export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryColors, recommendationCriteria = 'avgSalesPerStore' }: DashboardMapProps) {
+export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryColors, recommendationCriteria = 'avgSalesPerStore', selectedDistrictName }: DashboardMapProps) {
   const [isClient, setIsClient] = useState(false);
   const [seoulBoundaries, setSeoulBoundaries] = useState<any>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
@@ -58,6 +59,11 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
     [37.4, 126.7], // 남서쪽 좌표
     [37.8, 127.3]  // 북동쪽 좌표
   ];
+
+  // 외부에서 전달된 selectedDistrictName이 변경될 때 내부 상태 업데이트
+  useEffect(() => {
+    setSelectedDistrict(selectedDistrictName || null);
+  }, [selectedDistrictName]);
 
   useEffect(() => {
     setIsClient(true);
@@ -281,9 +287,9 @@ export function DashboardMap({ onDistrictClick, selectedIndustry, showIndustryCo
       />
       
       <MapContainer
-        center={[37.5665, 126.9780]} // Seoul coordinates
-        zoom={11}
-        minZoom={10}
+        center={[37.566, 126.978]} // Seoul City Hall coordinates for better centering
+        zoom={10}
+        minZoom={9}
         maxZoom={14}
         maxBounds={seoulBounds as any}
         style={{ height: 600, width: "100%", borderRadius: "0.5rem" }}

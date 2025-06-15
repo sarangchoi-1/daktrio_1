@@ -100,6 +100,79 @@ async function getIndustryDistrictData(selectedIndustry: any) {
   }
 }
 
+// 유동인구 데이터를 가져오는 함수
+async function getMobileFlowData(topDistricts: string[]) {
+  try {
+    const { loadDistrictMobileFlowData } = await import('@/lib/mobile-flow-data');
+    
+    const mobilFlowAnalysis: any = {};
+    
+    for (const district of topDistricts) {
+      try {
+        const data = await loadDistrictMobileFlowData(district);
+        
+        if (data.length > 0) {
+          // 성별/연령대별 집계
+          const demographics = data.reduce((acc: any, record: any) => {
+            const gender = record.gender === 'MALE' ? '남성' : '여성';
+            const ageGroup = getAgeGroupName(record.ageGroup.toString());
+            const key = `${gender}_${ageGroup}`;
+            
+            if (!acc[key]) acc[key] = 0;
+            acc[key] += record.totalFlow;
+            
+            return acc;
+          }, {});
+          
+          // 시간대별 집계
+          const hourlyData = data.reduce((acc: any, record: any) => {
+            const hour = record.timeZone;
+            if (!acc[hour]) acc[hour] = 0;
+            acc[hour] += record.totalFlow;
+            return acc;
+          }, {});
+          
+          // 요일별 집계
+          const weekdayData = data.reduce((acc: any, record: any) => {
+            const weekday = record.dayName;
+            if (!acc[weekday]) acc[weekday] = 0;
+            acc[weekday] += record.totalFlow;
+            return acc;
+          }, {});
+          
+          mobilFlowAnalysis[district] = {
+            demographics,
+            hourlyData,
+            weekdayData,
+            totalFlow: Object.values(demographics).reduce((a: any, b: any) => a + b, 0)
+          };
+        }
+      } catch (error) {
+        console.warn(`Failed to load mobile flow data for ${district}:`, error);
+      }
+    }
+    
+    return mobilFlowAnalysis;
+  } catch (error) {
+    console.error('Mobile flow data loading error:', error);
+    return {};
+  }
+}
+
+// 연령대 코드를 이름으로 변환하는 함수
+function getAgeGroupName(code: string): string {
+  const mapping: { [key: string]: string } = {
+    '1': '10대이하',
+    '2': '20대',
+    '3': '30대', 
+    '4': '40대',
+    '5': '50대',
+    '6': '60대',
+    '7': '70대이상'
+  };
+  return mapping[code] || '기타';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { selectedIndustry } = await request.json();
@@ -122,32 +195,82 @@ export async function POST(request: NextRequest) {
     // 업종명 추출
     const industryName = selectedIndustry.소분류 || selectedIndustry.중분류 || selectedIndustry.대분류 || '선택된 업종';
 
+    // 상위 3개 구 추출
+    const top3Districts = districtData.slice(0, 3).map(d => d.district);
+    
+    // 유동인구 데이터 가져오기
+    const mobileFlowData = await getMobileFlowData(top3Districts);
+
     // 데이터 기반 정보 구성 (전체 시장 추정값임을 명시)
     const dataInfo = districtData.map((data, index) => 
-      `${index + 1}. ${data.district}: 월중앙값 점포당매출 ${data.avgSalesPerStore.toLocaleString()}원(추정), 월총매출 ${(data.totalSales / 100000000).toFixed(1)}억원(추정), 가맹점수 ${data.totalStores}개`
+      `${index + 1}. ${data.district}: 월총매출 ${(data.totalSales / 100000000).toFixed(1)}억원, 총거래건수 ${(data.totalTransactions / 10000).toFixed(1)}만건, 가맹점수 ${data.totalStores}개 → 점포당매출 ${data.avgSalesPerStore.toLocaleString()}원`
     ).join('\n');
+    
+    // 유동인구 정보 구성
+    const mobileFlowInfo = top3Districts.map(district => {
+      const flowData = mobileFlowData[district];
+      if (!flowData) return `${district}: 유동인구 데이터 없음`;
+      
+      // 주요 인구통계 분석
+      const demographics = Object.entries(flowData.demographics)
+        .sort(([,a], [,b]) => (b as number) - (a as number))
+        .slice(0, 3)
+        .map(([key, count]) => `${key}: ${(count as number).toLocaleString()}명`)
+        .join(', ');
+      
+      // 피크 시간대 분석
+      const peakHours = Object.entries(flowData.hourlyData)
+        .sort(([,a], [,b]) => (b as number) - (a as number))
+        .slice(0, 2)
+        .map(([hour, count]) => `${hour}시: ${(count as number).toLocaleString()}명`)
+        .join(', ');
+      
+      return `${district}: 총 유동인구 ${flowData.totalFlow.toLocaleString()}명, 주요 고객층(${demographics}), 피크 시간(${peakHours})`;
+    }).join('\n');
     
     // 시스템 프롬프트
     const systemPrompt = `
-너는 창업자 또는 소상공인을 도와주는 한국어 창업 컨설턴트야.
-실제 매출 데이터를 바탕으로 업종별 최적 창업 지역을 추천해줘.
+너는 자영업자들을 위한 데이터 해석 전문 컨설턴트야. 
+매출 데이터와 유동인구 데이터를 종합하여 시장 상황을 명확하게 해석해줘.
 
 ${industryName} 업종의 서울시 구별 실제 월별 매출 데이터 (2020년 9-12월, 점포당 중앙값매출 기준 상위 10개):
 ${dataInfo}
 
-**중요**: 
-- 위 데이터는 신한카드 데이터(시장점유율 17.5%)를 전체 시장으로 추정한 값입니다.
-- 점포당 매출은 극단값 영향을 줄이기 위해 중앙값을 사용했습니다.
-- 월별 매출 데이터이므로 연간 매출을 추정하려면 대략 12배를 곱하면 됩니다.
-- 추정값이므로 상대적 비교에 중점을 두고 분석해주세요.
+상위 3개 구의 유동인구 데이터:
+${mobileFlowInfo}
 
-위 데이터를 근거로 다음 형식으로 답변해줘:
-1. 추천 구역 (상위 3-5개): 구체적인 구 이름과 추정 중앙값 매출 데이터 기반 이유
-2. 업종 분석: 추정 데이터로 본 해당 업종의 서울시 내 현황
-3. 창업 전략: 매출 데이터 분석을 통한 성공 포인트 3가지
-4. 주의사항: 추정 데이터 기반 분석의 한계점 포함
+**핵심 분석 관점**:
+1. **다각도 추천**: 창업 목표에 따른 맞춤형 구역 추천
+2. **점포당 매출 해석**: 
+   - 높은 총매출 + 낮은 점포당 매출 = "대형 시장이지만 경쟁 포화상태"
+   - 높은 총매출 + 높은 점포당 매출 = "수익성과 시장규모 모두 우수한 프리미엄 시장"
+   - 적은 가맹점수 + 높은 점포당 매출 = "틈새시장 기회"
+3. **유동인구 연결 분석**: 유동인구 패턴으로 점포당 매출의 원인 해석
 
-답변은 500자 이내로 구체적이고 실용적으로 해줘. 반드시 제공된 추정 중앙값 매출 데이터를 근거로 추천해줘.
+다음 구조로 분석해줘:
+
+**1. 목표별 맞춤 추천**
+- 큰 시장을 원한다면: 총매출 상위 2개 구 추천 ("○○구, ○○구")
+- 점포당 매출을 고려한다면: 점포당 매출 상위 2개 구 추천 ("○○구, ○○구")  
+- 시장 초기 진입 기회를 원한다면: 가맹점수가 가장 적은 2개 구 추천 ("○○구, ○○구")
+
+**2. 각 추천 구역별 상세 분석**
+- 큰 시장 추천 구역: 시장 규모를 구체적 수치로 강조, 경쟁 상황 분석
+- 고수익성 추천 구역: 점포당 매출이 높은 이유와 성공 요인 분석
+- 초기 진입 추천 구역: 적은 경쟁 환경의 장점과 시장 개척 가능성
+
+**3. 유동인구 기반 고객 분석**
+- 각 추천 구역별 주요 고객층과 업종 적합성
+- 시간대별 패턴과 운영 전략 연결
+- 성별/연령대와 해당 업종의 타겟 매칭도
+
+**4. 전략적 창업 조언**
+- 각 목표(큰 시장/고수익성/초기 진입)별 차별화 전략
+- 유동인구 패턴에 맞는 운영 방식
+- 현실적인 경쟁 상황과 대응 방안
+
+답변은 900자 내외로 데이터를 근거로 한 구체적이고 실무적인 해석을 제공해줘.
+각 목표별로 명확한 구역 추천과 그 이유를 제시해줘.
 `;
 
     const completion = await openai.chat.completions.create({
@@ -159,11 +282,11 @@ ${dataInfo}
         },
         {
           role: "user", 
-          content: `${industryName} 업종으로 서울에서 창업하려고 합니다. 실제 매출 데이터를 바탕으로 추천해주세요.`
+          content: `${industryName} 업종으로 서울에서 창업하려고 합니다. 매출 데이터와 유동인구 데이터를 종합하여 분석해주세요.`
         }
       ],
       temperature: 0.7,
-      max_tokens: 700
+      max_tokens: 1000
     });
 
     const analysis = completion.choices[0]?.message?.content || '분석 결과를 생성할 수 없습니다.';
