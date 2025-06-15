@@ -338,11 +338,6 @@ export function IndustrySelectorHardcoded({ onIndustryChange }: IndustrySelector
                       <span className="font-semibold">{selectedIndustry.class3}</span>
                     </>
                   )}
-                  {selectedIndustry.code && (
-                    <span className="ml-2 text-xs bg-blue-200 px-2 py-1 rounded">
-                      {selectedIndustry.code}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DashboardMap } from "@/components/dashboard-map"
 import { IndustrySelectorHardcoded, type SelectedIndustry } from "@/components/industry-selector-hardcoded"
+import { MobileFlowChart } from "@/components/mobile-flow-chart"
 import { BarChart, Users, TrendingUp, Eye, Building2 } from "lucide-react"
 
 interface DistrictInfo {
@@ -113,7 +114,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   
-                  {/* 향후 데이터 차트들이 들어갈 공간 */}
+                  {/* 간단한 요약 통계 */}
                   <div className="space-y-3">
                     <div className="h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                       <p className="text-gray-500 text-sm">
@@ -125,9 +126,6 @@ export default function DashboardPage() {
                     </div>
                     <div className="h-24 bg-gray-100 rounded-lg flex items-center justify-center">
                       <p className="text-gray-500 text-sm">OD 데이터 차트 (준비중)</p>
-                    </div>
-                    <div className="h-24 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500 text-sm">관광 데이터 차트 (준비중)</p>
                     </div>
                   </div>
                 </div>
@@ -144,6 +142,9 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* 유동인구 분석 */}
+        <MobileFlowChart selectedDistrict={selectedDistrict?.name} />
 
         {/* 하단 통계 카드들 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
