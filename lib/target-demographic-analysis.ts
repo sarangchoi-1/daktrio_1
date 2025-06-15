@@ -1,3 +1,6 @@
+import industryDemographicProfilesRaw from "@/data/industry-demographic-profiles.json";
+const industryDemographicProfiles: Record<string, { genders: string[]; ageGroups: number[] }> = industryDemographicProfilesRaw as any;
+
 // 업종별 최적 타겟층 분석
 export interface DemographicProfile {
   ageGroup: number; // 0-7
@@ -22,7 +25,6 @@ export interface TargetDemographicAnalysis {
   demographicProfile: DemographicProfile[];
   topTargetGroups: DemographicProfile[];
   recommendations: string[];
-  insights: string[];
 }
 
 // 연령대 매핑
@@ -187,11 +189,11 @@ async function loadIndustryPerformance(districtName: string, selectedIndustry: a
 
         // 선택된 업종과 매칭
         let isMatch = false;
-        if (selectedIndustry.소분류 && 소분류.includes(selectedIndustry.소분류)) {
+        if (selectedIndustry.class3 && 소분류.includes(selectedIndustry.class3)) {
           isMatch = true;
-        } else if (selectedIndustry.중분류 && 중분류.includes(selectedIndustry.중분류)) {
+        } else if (selectedIndustry.class2 && 중분류.includes(selectedIndustry.class2)) {
           isMatch = true;
-        } else if (selectedIndustry.대분류 && 대분류.includes(selectedIndustry.대분류)) {
+        } else if (selectedIndustry.class1 && 대분류.includes(selectedIndustry.class1)) {
           isMatch = true;
         }
 
@@ -208,7 +210,7 @@ async function loadIndustryPerformance(districtName: string, selectedIndustry: a
       return null;
     }
 
-    const industryName = selectedIndustry.소분류 || selectedIndustry.중분류 || selectedIndustry.대분류 || '선택된 업종';
+    const industryName = selectedIndustry.class3 || selectedIndustry.class2 || selectedIndustry.class1 || '선택된 업종';
 
     return {
       industryName,
@@ -227,14 +229,34 @@ async function loadIndustryPerformance(districtName: string, selectedIndustry: a
 function generateTargetRecommendations(
   demographics: DemographicProfile[], 
   industryPerformance: IndustryPerformance | null,
-  industryName: string
-): { topTargetGroups: DemographicProfile[]; recommendations: string[]; insights: string[] } {
-  
-  // 상위 3개 인구 그룹
-  const topTargetGroups = demographics.slice(0, 3);
+  industryName: string,
+  selectedIndustry?: any
+): { topTargetGroups: DemographicProfile[]; recommendations: string[]; } {
+  let topTargetGroups: DemographicProfile[] = [];
+  // Try to use demographic profile for 소분류 if available
+  let profile: { genders: string[]; ageGroups: number[] } | undefined = undefined;
+  const industryKey = selectedIndustry?.class3 || selectedIndustry?.class2 || selectedIndustry?.class1;
+  if (
+    industryKey &&
+    typeof industryKey === 'string' &&
+    industryDemographicProfiles.hasOwnProperty(industryKey)
+  ) {
+    profile = industryDemographicProfiles[industryKey];
+  }
+  if (profile) {
+    // Filter demographics by profile
+    const filtered = demographics.filter(d => profile!.genders.includes(d.gender) && profile!.ageGroups.includes(d.ageGroup));
+    topTargetGroups = filtered.slice(0, 3);
+    // Fallback if not enough
+    if (topTargetGroups.length < 3) {
+      topTargetGroups = [...filtered, ...demographics].slice(0, 3);
+    }
+  } else {
+    // Fallback: top 3 by population
+    topTargetGroups = demographics.slice(0, 3);
+  }
   
   const recommendations: string[] = [];
-  const insights: string[] = [];
 
   // 업종별 맞춤 추천
   if (industryName.includes('커피') || industryName.includes('카페')) {
@@ -260,20 +282,12 @@ function generateTargetRecommendations(
     recommendations.push(`주요 타겟: ${topGroup.ageGroupName} ${topGroup.gender === 'MALE' ? '남성' : '여성'} (${(topGroup.ratio * 100).toFixed(1)}%)`);
   }
 
-  // 인사이트 생성
-  const maleRatio = demographics.filter(d => d.gender === 'MALE').reduce((sum, d) => sum + d.ratio, 0);
-  const femaleRatio = demographics.filter(d => d.gender === 'FEMALE').reduce((sum, d) => sum + d.ratio, 0);
-  
-  if (Math.abs(maleRatio - femaleRatio) > 0.1) {
-    insights.push(`성별 편중: ${maleRatio > femaleRatio ? '남성' : '여성'} 비율이 ${Math.abs(maleRatio - femaleRatio) * 100}%p 높음`);
-  }
+  console.log('Selected industry:', selectedIndustry.class3);
+  console.log('Profile used:', profile);
+  console.log('Filtered demographics:', demographics);
+  console.log('Top target groups:', topTargetGroups);
 
-  const youngRatio = demographics.filter(d => d.ageGroup >= 2 && d.ageGroup <= 4).reduce((sum, d) => sum + d.ratio, 0);
-  if (youngRatio > 0.4) {
-    insights.push(`청년층 집중: 20-40대가 ${(youngRatio * 100).toFixed(1)}% 차지`);
-  }
-
-  return { topTargetGroups, recommendations, insights };
+  return { topTargetGroups, recommendations };
 }
 
 // 메인 분석 함수
@@ -295,14 +309,17 @@ export async function analyzeTargetDemographics(
     const industryPerformance = await loadIndustryPerformance(districtName, selectedIndustry);
     
     // 추천 생성
-    const industryName = selectedIndustry.소분류 || selectedIndustry.중분류 || selectedIndustry.대분류 || '선택된 업종';
-    const { topTargetGroups, recommendations, insights } = generateTargetRecommendations(
+    const industryName = selectedIndustry.class3 || selectedIndustry.class2 || selectedIndustry.class1 || '선택된 업종';
+    const { topTargetGroups, recommendations } = generateTargetRecommendations(
       demographicProfile, 
       industryPerformance,
-      industryName
+      industryName,
+      selectedIndustry
     );
 
     console.log(`Target demographic analysis completed for ${districtName}`);
+
+    console.log('selectedIndustry object:', selectedIndustry);
 
     return {
       districtName,
@@ -310,8 +327,7 @@ export async function analyzeTargetDemographics(
       industryPerformance,
       demographicProfile,
       topTargetGroups,
-      recommendations,
-      insights
+      recommendations
     };
   } catch (error) {
     console.error(`Error analyzing target demographics for ${districtName}:`, error);

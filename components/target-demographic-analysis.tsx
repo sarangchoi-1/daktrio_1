@@ -7,11 +7,45 @@ import {
   analyzeTargetDemographics,
   type TargetDemographicAnalysis
 } from '@/lib/target-demographic-analysis';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface TargetDemographicAnalysisProps {
   districtName?: string;
   selectedIndustry?: any;
 }
+
+// Custom tooltip for the pie chart
+const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+  if (active && payload && payload.length && payload[0].payload.ageGroupName !== '기타') {
+    const group = payload[0].payload;
+    return (
+      <div style={{
+        background: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        fontSize: '15px',
+        color: '#22223b',
+        fontWeight: 500,
+        minWidth: 120
+      }}>
+        <div>
+          <span style={{ color: payload[0].color, fontWeight: 700 }}>
+            {group.ageGroupName} {group.gender === 'MALE' ? '남성' : group.gender === 'FEMALE' ? '여성' : ''}
+          </span>
+        </div>
+        <div style={{ marginTop: 4 }}>
+          비율: <span style={{ fontWeight: 700 }}>{(group.ratio * 100).toFixed(1)}%</span>
+        </div>
+        <div style={{ fontSize: '18px', color: '#22223b', fontWeight: 700, marginTop: 8 }}>
+          인구: {group.population?.toLocaleString() ?? '-'}명
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function TargetDemographicAnalysisComponent({ 
   districtName, 
@@ -80,6 +114,17 @@ export default function TargetDemographicAnalysisComponent({
     );
   }
 
+  // Sort topGroups by ratio descending, 기타 always last
+  const sortedTopGroups = [...data.topTargetGroups].sort((a, b) => b.ratio - a.ratio);
+  const 기타비율 = 1 - sortedTopGroups.reduce((sum, g) => sum + g.ratio, 0);
+  const pieData = 기타비율 > 0.001
+    ? [
+        ...sortedTopGroups,
+        { ageGroupName: '기타', gender: '', ratio: 기타비율 }
+      ]
+    : sortedTopGroups;
+  const COLORS = ['#3b82f6', '#22c55e', '#a21caf', '#d1d5db']; // last color for 기타
+
   return (
     <Card className="p-6 bg-gray-100">
       <CardHeader>
@@ -113,73 +158,47 @@ export default function TargetDemographicAnalysisComponent({
         )}
 
         {/* 인사이트 */}
-        {data.insights.length > 0 && (
-          <div className="bg-yellow-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Info className="h-4 w-4 text-yellow-600" />
-              <span className="text-sm font-medium text-yellow-800">지역 특성</span>
-            </div>
-            <ul className="text-xs text-yellow-700 space-y-1">
-              {data.insights.map((insight, index) => (
-                <li key={index}>• {insight}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {/* [지역 특성] section removed */}
 
         {/* 주요 타겟 그룹 */}
         <div>
-          <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-bold mb-3 flex items-center gap-2 bg-gray-200 px-3 py-2 rounded">
             <Users className="h-4 w-4" />
             주요 타겟 그룹 TOP 3
           </h4>
-          <div className="space-y-2">
-            {data.topTargetGroups.map((group, index) => (
-              <div key={index} className="bg-white p-3 rounded border">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">
-                    #{index + 1} {group.ageGroupName} {group.gender === 'MALE' ? '남성' : '여성'}
-                  </span>
-                  <span className="text-xs text-gray-600">
-                    {(group.ratio * 100).toFixed(1)}%
-                  </span>
-                </div>
-                
-                {/* 비율 바 */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-500 ${
-                      index === 0 ? 'bg-blue-500' : 
-                      index === 1 ? 'bg-green-500' : 'bg-purple-500'
-                    }`}
-                    style={{ width: `${group.ratio * 100}%` }}
-                  ></div>
-                </div>
-                
-                <div className="text-xs text-gray-500">
-                  인구: {group.population.toLocaleString()}명
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center">
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="ratio"
+                  nameKey="ageGroupName"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  startAngle={90}
+                  endAngle={-270}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomPieTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <ul className="mt-2 text-xs text-gray-700 space-y-1">
+              {pieData.filter(group => group.ageGroupName !== '기타').map((group, idx) => (
+                <li key={idx}>
+                  <span
+                    className="inline-block w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                  ></span>
+                  {group.ageGroupName} {group.gender === 'MALE' ? '남성' : '여성'} ({(group.ratio * 100).toFixed(1)}%)
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-
-        {/* 추천 사항 */}
-        {data.recommendations.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              마케팅 추천
-            </h4>
-            <div className="space-y-2">
-              {data.recommendations.map((recommendation, index) => (
-                <div key={index} className="bg-green-50 p-2 rounded text-xs text-green-700">
-                  • {recommendation}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 전체 인구 분포 요약 */}
         <div className="bg-gray-50 p-3 rounded">
