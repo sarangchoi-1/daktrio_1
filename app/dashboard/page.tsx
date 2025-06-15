@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [selectedDistrict, setSelectedDistrict] = useState<DistrictInfo | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<SelectedIndustry>({});
 
-  const handleDistrictClick = (district: DistrictInfo) => {
+  const handleDistrictClick = (district: DistrictInfo | null) => {
     setSelectedDistrict(district);
   };
 
