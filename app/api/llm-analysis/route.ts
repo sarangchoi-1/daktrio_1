@@ -195,19 +195,31 @@ export async function POST(request: NextRequest) {
     // 업종명 추출
     const industryName = selectedIndustry.소분류 || selectedIndustry.중분류 || selectedIndustry.대분류 || '선택된 업종';
 
-    // 상위 3개 구 추출
-    const top3Districts = districtData.slice(0, 3).map(d => d.district);
+    // 총 매출 기준 상위 3개 구 추출
+    const topSalesDistricts = [...districtData]
+      .sort((a, b) => b.totalSales - a.totalSales)
+      .slice(0, 3)
+      .map(d => d.district);
+
+    // 점포당 매출 기준 상위 3개 구 추출
+    const topAvgSalesDistricts = [...districtData]
+      .sort((a, b) => b.avgSalesPerStore - a.avgSalesPerStore)
+      .slice(0, 3)
+      .map(d => d.district);
+      
+    // 유동인구 데이터를 가져올 구 목록 (중복 제거)
+    const districtsForFlowData = [...new Set([...topSalesDistricts, ...topAvgSalesDistricts])];
     
     // 유동인구 데이터 가져오기
-    const mobileFlowData = await getMobileFlowData(top3Districts);
+    const mobileFlowData = await getMobileFlowData(districtsForFlowData);
 
-    // 데이터 기반 정보 구성 (전체 시장 추정값임을 명시)
+    // 데이터 기반 정보 구성 (전체 데이터 제공)
     const dataInfo = districtData.map((data, index) => 
       `${index + 1}. ${data.district}: 월총매출 ${(data.totalSales / 100000000).toFixed(1)}억원, 총거래건수 ${(data.totalTransactions / 10000).toFixed(1)}만건, 가맹점수 ${data.totalStores}개 → 점포당매출 ${data.avgSalesPerStore.toLocaleString()}원`
     ).join('\n');
     
     // 유동인구 정보 구성
-    const mobileFlowInfo = top3Districts.map(district => {
+    const mobileFlowInfo = districtsForFlowData.map(district => {
       const flowData = mobileFlowData[district];
       if (!flowData) return `${district}: 유동인구 데이터 없음`;
       
@@ -240,34 +252,32 @@ ${dataInfo}
 ${mobileFlowInfo}
 
 **핵심 분석 관점**:
-1. **다각도 추천**: 창업 목표에 따른 맞춤형 구역 추천
+1. **다각도 추천**: 총 매출(시장 규모)과 점포당 매출(수익성) 두 가지 관점에서 각각 상위 3개 구를 추천하고 분석.
 2. **점포당 매출 해석**: 
    - 높은 총매출 + 낮은 점포당 매출 = "대형 시장이지만 경쟁 포화상태"
    - 높은 총매출 + 높은 점포당 매출 = "수익성과 시장규모 모두 우수한 프리미엄 시장"
    - 적은 가맹점수 + 높은 점포당 매출 = "틈새시장 기회"
-3. **유동인구 연결 분석**: 유동인구 패턴으로 점포당 매출의 원인 해석
+3. **유동인구 연결 분석**: 유동인구 패턴으로 매출 특성의 원인 해석
 
 다음 구조로 분석해줘:
 
-**1. 목표별 맞춤 추천**
-- 큰 시장을 원한다면: 총매출 상위 2개 구 추천 ("○○구, ○○구")
-- 점포당 매출을 고려한다면: 점포당 매출 상위 2개 구 추천 ("○○구, ○○구")  
-- 시장 초기 진입 기회를 원한다면: 가맹점수가 가장 적은 2개 구 추천 ("○○구, ○○구")
+1. 종합 추천 요약
+- 시장 규모가 가장 큰 Top 3: ${topSalesDistricts.join(', ')}
+- 수익성이 가장 좋은 Top 3: ${topAvgSalesDistricts.join(', ')}
 
-**2. 각 추천 구역별 상세 분석**
-- 큰 시장 추천 구역: 시장 규모를 구체적 수치로 강조, 경쟁 상황 분석
-- 고수익성 추천 구역: 점포당 매출이 높은 이유와 성공 요인 분석
-- 초기 진입 추천 구역: 적은 경쟁 환경의 장점과 시장 개척 가능성
+2. 시장 규모 중심 분석 (총 매출 Top 3)
+- 이 구역들을 추천하는 이유 (큰 시장, 높은 잠재 고객 수)
+- 각 구역의 경쟁 상황 (가맹점 수 언급) 및 유동인구 특성 연결 분석
 
-**3. 유동인구 기반 고객 분석**
+3. 수익성 중심 분석 (점포당 매출 Top 3)
 - 각 추천 구역별 주요 고객층과 업종 적합성
-- 시간대별 패턴과 운영 전략 연결
-- 성별/연령대와 해당 업종의 타겟 매칭도
+- 이 구역들을 추천하는 이유 (높은 수익성, 효율적인 운영 가능성)
+- 왜 점포당 매출이 높은지 유동인구 특성(예: 특정 연령/성별의 높은 구매력)과 연결하여 분석
 
-**4. 전략적 창업 조언**
-- 각 목표(큰 시장/고수익성/초기 진입)별 차별화 전략
-- 유동인구 패턴에 맞는 운영 방식
-- 현실적인 경쟁 상황과 대응 방안
+4. 전략적 창업 조언
+- '시장 규모'를 우선한다면 어떤 전략이 필요한지
+- '수익성'을 우선한다면 어떤 전략이 필요한지
+- 두 가지 모두를 고려한 최적의 타협점이나 제3의 대안 제시
 
 답변은 900자 내외로 데이터를 근거로 한 구체적이고 실무적인 해석을 제공해줘.
 각 목표별로 명확한 구역 추천과 그 이유를 제시해줘.
