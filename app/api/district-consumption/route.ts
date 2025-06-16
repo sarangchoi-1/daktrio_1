@@ -42,6 +42,8 @@ async function loadAllDistrictDataServer() {
       // 파일 경로 설정 (public 폴더 기준)
       const filePath = path.join(process.cwd(), 'data', 'distinction', `신한카드_서울_${district}_${yearMonth}.csv`);
       
+      console.log("Trying to read file:", filePath);
+      
       if (fs.existsSync(filePath)) {
         const csvText = fs.readFileSync(filePath, 'utf-8');
         const records = parseDistrictCardCSV(csvText);
