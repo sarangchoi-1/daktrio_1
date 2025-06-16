@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 export async function GET() {
-  const dirPath = path.join(process.cwd(), 'data', '구별');
+  const dirPath = path.join(process.cwd(), 'data', 'distinction');
   let files: string[] = [];
   let error: string | null = null;
   try {
