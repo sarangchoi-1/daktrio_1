@@ -69,9 +69,12 @@ async function getIndustryDistrictData(selectedIndustry: any) {
       return null;
     }
 
-    // 서버 사이드 데이터 로드
+    // Load all data
     const allData = await loadAllDistrictDataServer();
-    
+
+    // Debug: Log a sample of the loaded data
+    console.log("First 5 rows of allData:", allData.slice(0, 5));
+
     // 업종별 구별 통계 계산
     const districtStats = calculateDistrictStats(allData, selectedIndustry);
     
@@ -97,13 +100,19 @@ export async function POST(request: NextRequest) {
   try {
     const { selectedIndustry, recommendationCriteria } = await request.json();
 
+    // Debug: Log the incoming payload
+    console.log("API received selectedIndustry:", selectedIndustry);
+
     if (!selectedIndustry || Object.keys(selectedIndustry).length === 0) {
       return NextResponse.json({ error: '업종 정보가 필요합니다.' }, { status: 400 });
     }
 
     // 업종별 실제 데이터 가져오기
     const districtData = await getIndustryDistrictData(selectedIndustry);
-    
+
+    // Debug: Log the result of filtering
+    console.log("API returning districtData:", districtData?.slice(0, 5)); // show first 5 for brevity
+
     if (!districtData || districtData.length === 0) {
       return NextResponse.json({ 
         data: [],
